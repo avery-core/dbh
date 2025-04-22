@@ -72,7 +72,7 @@ function createCollapsibleSection(title, defaultOpen = true) {
 }
 
 // Main code execution
-if(document.getElementById('drifted v3')) return;
+if(document.getElementById('driftBossModMenu')) return;
 document.querySelectorAll('canvas').forEach(c => c.style.pointerEvents = 'none');
 
 const menu = document.createElement('div');
@@ -106,7 +106,7 @@ titleBar.style.cssText = `
     margin:-12px -12px 12px -12px;
 `;
 titleBar.innerHTML = `
-    <span style="font-weight:500;color:#dcdcdc">Drift Boss Mod Menu</span>
+    <span style="font-weight:500;color:#dcdcdc">Drifted v3</span>
     <span style="cursor:pointer;color:#dcdcdc;padding:4px">&times;</span>
 `;
 menu.appendChild(titleBar);
