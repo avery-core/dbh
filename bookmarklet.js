@@ -1,1 +1,289 @@
-javascript:(function(){if(document.getElementById('driftBossModMenu'))return;document.querySelectorAll('canvas').forEach(c=>c.style.pointerEvents='none');const e=document.createElement('div');e.id='driftBossModMenu';e.style.cssText='position:fixed!important;top:20px!important;left:20px!important;width:320px;background:#1a1a1a;color:white;font-family:\'Segoe UI\',Tahoma,Geneva,Verdana,sans-serif;border-radius:10px;box-shadow:0 0 15px rgba(0,0,0,0.8);padding:20px;user-select:none;z-index:2147483647!important;cursor:grab';const t=document.createElement('div');t.style.cssText='display:flex;justify-content:space-between;align-items:center;font-weight:bold;font-size:18px;margin-bottom:15px;cursor:grab';t.innerHTML='<span>Drift Boss Mod Menu</span><span style="cursor:pointer;">&#10005;</span>';e.appendChild(t);t.lastElementChild.onclick=()=>{e.remove();document.querySelectorAll('canvas').forEach(c=>c.style.pointerEvents='auto')};let n=!1,i=0,o=0,a=0,l=0;t.addEventListener('mousedown',t=>{if(!['INPUT','BUTTON','LABEL','SELECT','TEXTAREA'].includes(t.target.tagName)){n=!0,i=t.clientX,o=t.clientY,a=e.offsetLeft,l=e.offsetTop,e.style.cursor='grabbing',t.preventDefault()}});window.addEventListener('mousemove',t=>{if(n){let r=a+(t.clientX-i),s=l+(t.clientY-o);r=Math.min(Math.max(r,0),window.innerWidth-e.offsetWidth),s=Math.min(Math.max(s,0),window.innerHeight-e.offsetHeight),e.style.left=r+'px',e.style.top=s+'px'}});window.addEventListener('mouseup',()=>{n&&(n=!1,e.style.cursor='grab')});const d=document.createElement('form');d.style.cssText='display:flex;flex-direction:column;gap:12px';[{id:'coins',label:'Coins',type:'number',value:9999},{id:'score',label:'Score',type:'number',value:5000},{id:'double',label:'Double Score',type:'number',value:5},{id:'insurance',label:'Insurance',type:'number',value:5},{id:'boost',label:'Coin Boost',type:'number',value:5}].forEach(t=>{const n=document.createElement('div');n.style.cssText='display:flex;flex-direction:column';const i=document.createElement('label');i.htmlFor=t.id,i.textContent=t.label,i.style.marginBottom='4px';const o=document.createElement('input');o.type=t.type,o.id=t.id,o.value=t.value,o.min='0',o.style.cssText='padding:8px;border-radius:6px;border:none;background:#333;color:white;font-size:14px',n.appendChild(i),n.appendChild(o),d.appendChild(n)});const c=document.createElement('div');c.style.cssText='display:flex;flex-direction:column';const r=document.createElement('label');r.htmlFor='speed',r.textContent='Speed Mod',r.style.marginBottom='4px';const s=document.createElement('input');s.type='range',s.id='speed',s.min='1',s.max='10',s.value='5',s.style.width='100%';const m=document.createElement('div');m.textContent='Speed: 5',m.style.cssText='text-align:right;font-size:12px;color:#ccc',s.addEventListener('input',()=>{m.textContent='Speed: '+s.value}),c.appendChild(r),c.appendChild(s),c.appendChild(m),d.appendChild(c);const u=document.createElement('div');u.style.cssText='display:flex;justify-content:space-between;margin-top:15px';const g=document.createElement('button');g.type='submit',g.textContent='Apply',g.style.cssText='flex:1;margin-right:8px;background:#00d8ff;border:none;border-radius:8px;color:#1a1a1a;font-weight:bold;cursor:pointer;padding:10px';const h=document.createElement('button');h.type='button',h.textContent='Reset',h.style.cssText='flex:1;background:#ff4d4d;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;padding:10px',u.appendChild(g),u.appendChild(h),d.appendChild(u),d.addEventListener('submit',t=>{t.preventDefault();const n={sound:.7,music:.3,score:Number(d.querySelector('#score').value),hasShownTutorial:!0,collectedCoin:Number(d.querySelector('#coins').value),cars:Array.from({length:27},(t,n)=>n),currentCar:0,currentTip:0,booster1:Number(d.querySelector('#double').value),booster2:Number(d.querySelector('#insurance').value),booster3:Number(d.querySelector('#boost').value),ko:0,speed:Number(d.querySelector('#speed').value),hasShownBoosterTutorial:!0};localStorage.setItem("mjs-drift-boss-game-v1.0.1-dailyreward",JSON.stringify(n)),alert('Game values applied! Reloading...'),location.reload()}),h.addEventListener('click',()=>{confirm('Are you sure you want to reset all game progress? This cannot be undone.')&&(localStorage.removeItem("mjs-drift-boss-game-v1.0.1-dailyreward"),alert('Game reset! Reloading...'),location.reload())}),e.appendChild(d),document.body.appendChild(e)})();
+javascript:(function(){
+// Hoist core functions first
+function createInput(id, label, value, min=0, max=99999) {
+    const container = document.createElement('div');
+    container.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+    
+    const labelElem = document.createElement('label');
+    labelElem.textContent = label;
+    labelElem.style.cssText = 'color:#dcdcdc;font-size:14px;margin-bottom:4px';
+    
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.id = id;
+    input.value = value;
+    input.min = min;
+    input.max = max;
+    input.style.cssText = `
+        padding:8px;
+        border-radius:4px;
+        border:1px solid #2e2e2e;
+        background:#252525;
+        color:#dcdcdc;
+        font-size:14px;
+        transition:all 0.2s ease;
+        outline:none;
+    `;
+    
+    input.addEventListener('focus', () => input.style.borderColor = '#00d8ff');
+    input.addEventListener('blur', () => input.style.borderColor = '#2e2e2e');
+    
+    container.appendChild(labelElem);
+    container.appendChild(input);
+    return container;
+}
+
+function createCollapsibleSection(title, defaultOpen = true) {
+    const section = document.createElement('div');
+    
+    const header = document.createElement('div');
+    header.style.cssText = `
+        cursor:pointer;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        padding:8px 0;
+        user-select:none;
+        margin: -4px 0;
+        position: relative;
+    `;
+    header.innerHTML = `<div style="color:#00d8ff;font-weight:500">${title}</div>
+                       <span style="transition:transform 0.2s ease;color:#00d8ff">${defaultOpen ? '▴' : '▾'}</span>`;
+    
+    const content = document.createElement('div');
+    content.style.cssText = `
+        overflow:hidden;
+        transition:max-height 0.3s ease, opacity 0.2s ease;
+        max-height:${defaultOpen ? '500px' : '0'};
+        opacity:${defaultOpen ? '1' : '0'};
+        margin: 8px 0;
+    `;
+    
+    header.addEventListener('click', () => {
+        const isOpen = content.style.maxHeight !== '0px';
+        content.style.maxHeight = isOpen ? '0' : '500px';
+        content.style.opacity = isOpen ? '0' : '1';
+        header.querySelector('span').textContent = isOpen ? '▾' : '▴';
+    });
+    
+    section.appendChild(header);
+    section.appendChild(content);
+    return {section, content};
+}
+
+// Main code execution
+if(document.getElementById('drifted v3')) return;
+document.querySelectorAll('canvas').forEach(c => c.style.pointerEvents = 'none');
+
+const menu = document.createElement('div');
+menu.id = 'driftBossModMenu';
+menu.style.cssText = `
+    position:fixed!important;
+    top:20px!important;
+    left:20px!important;
+    width:360px;
+    background:#1a1a1a;
+    color:#dcdcdc;
+    font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+    border-radius:4px;
+    padding:12px;
+    user-select:none;
+    z-index:2147483647!important;
+    cursor:move;
+    border:1px solid #2e2e2e;
+    box-shadow:0 2px 10px rgba(0,0,0,0.4);
+`;
+
+// Title Bar
+const titleBar = document.createElement('div');
+titleBar.style.cssText = `
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px;
+    background:#202020;
+    border-radius:4px;
+    margin:-12px -12px 12px -12px;
+`;
+titleBar.innerHTML = `
+    <span style="font-weight:500;color:#dcdcdc">Drift Boss Mod Menu</span>
+    <span style="cursor:pointer;color:#dcdcdc;padding:4px">&times;</span>
+`;
+menu.appendChild(titleBar);
+
+// Close handler
+titleBar.lastElementChild.onclick = () => {
+    menu.remove();
+    document.querySelectorAll('canvas').forEach(c => c.style.pointerEvents = 'auto');
+};
+
+// Dragging Logic
+let isDragging = false;
+let startX, startY, startLeft, startTop;
+
+titleBar.addEventListener('mousedown', (e) => {
+    if(!['INPUT','BUTTON','LABEL','SELECT','TEXTAREA'].includes(e.target.tagName)) {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = menu.offsetLeft;
+        startTop = menu.offsetTop;
+        menu.style.cursor = 'grabbing';
+        e.preventDefault();
+    }
+});
+
+window.addEventListener('mousemove', (e) => {
+    if(isDragging) {
+        const newLeft = startLeft + (e.clientX - startX);
+        const newTop = startTop + (e.clientY - startY);
+        
+        menu.style.left = Math.min(Math.max(newLeft, 0), window.innerWidth - menu.offsetWidth) + 'px';
+        menu.style.top = Math.min(Math.max(newTop, 0), window.innerHeight - menu.offsetHeight) + 'px';
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    if(isDragging) {
+        isDragging = false;
+        menu.style.cursor = 'move';
+    }
+});
+
+// Form Container
+const form = document.createElement('form');
+form.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+
+// Values Section
+const values = createCollapsibleSection('💰 Values');
+values.content.style.padding = '4px 0';
+
+[
+    createInput('coins', 'Coins', 9999),
+    createInput('score', 'Score', 5000),
+    createInput('double', 'Double Score Level', 5, 0, 10),
+    createInput('insurance', 'Insurance Level', 5, 0, 10),
+    createInput('boost', 'Coin Boost Level', 5, 0, 10),
+    createInput('currentCar', 'Current Car ID', 0, 0, 26) // Added car selection
+].forEach(el => values.content.appendChild(el));
+
+form.appendChild(values.section);
+
+// Options Section
+const options = createCollapsibleSection('⚙️ Options');
+options.content.style.padding = '4px 0';
+
+// Unlock Cars Button
+const carButton = document.createElement('button');
+carButton.type = 'button';
+carButton.textContent = 'Unlock All Cars';
+carButton.style.cssText = `
+    padding:8px;
+    border-radius:4px;
+    border:none;
+    background:#00d8ff30;
+    color:#00d8ff;
+    font-weight:500;
+    cursor:pointer;
+    transition:all 0.2s ease;
+    margin: 4px 0;
+    width:100%;
+`;
+
+carButton.addEventListener('mouseenter', () => carButton.style.backgroundColor = '#00d8ff50');
+carButton.addEventListener('mouseleave', () => carButton.style.backgroundColor = '#00d8ff30');
+carButton.addEventListener('click', () => {
+    const currentData = JSON.parse(localStorage.getItem("mjs-drift-boss-game-v1.0.1-dailyreward") || '{}');
+    currentData.cars = Array.from({length:27}, (_,i) => i);
+    localStorage.setItem("mjs-drift-boss-game-v1.0.1-dailyreward", JSON.stringify(currentData));
+    alert('All cars unlocked! Reloading...');
+    location.reload();
+});
+
+options.content.appendChild(carButton);
+form.appendChild(options.section);
+
+// Action Buttons
+const buttons = document.createElement('div');
+buttons.style.cssText = 'display:flex;gap:8px;margin-top:12px';
+
+const applyBtn = document.createElement('button');
+applyBtn.type = 'submit';
+applyBtn.textContent = 'Apply';
+applyBtn.style.cssText = `
+    flex:1;
+    background:#00d8ff;
+    border:none;
+    border-radius:4px;
+    color:#1a1a1a;
+    font-weight:500;
+    cursor:pointer;
+    padding:8px;
+    transition:all 0.2s ease;
+`;
+
+const resetBtn = document.createElement('button');
+resetBtn.type = 'button';
+resetBtn.textContent = 'Reset';
+resetBtn.style.cssText = `
+    flex:1;
+    background:#ff4d4d;
+    border:none;
+    border-radius:4px;
+    color:white;
+    font-weight:500;
+    cursor:pointer;
+    padding:8px;
+    transition:all 0.2s ease;
+`;
+
+// Button Hover Effects
+[applyBtn, resetBtn].forEach(btn => {
+    btn.addEventListener('mouseenter', () => btn.style.opacity = '0.8');
+    btn.addEventListener('mouseleave', () => btn.style.opacity = '1');
+});
+
+buttons.appendChild(applyBtn);
+buttons.appendChild(resetBtn);
+form.appendChild(buttons);
+
+// Form Submission
+form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    // Get existing data first
+    const existingData = JSON.parse(localStorage.getItem("mjs-drift-boss-game-v1.0.1-dailyreward") || '{}');
+    
+    const config = {
+        ...existingData,  // Preserve existing values
+        sound: 0.7,
+        music: 0.3,
+        score: Number(form.querySelector('#score').value),
+        hasShownTutorial: true,
+        collectedCoin: Number(form.querySelector('#coins').value),
+        currentCar: Number(form.querySelector('#currentCar').value), // Added car selection
+        currentTip: existingData.currentTip || 0,
+        booster1: Number(form.querySelector('#double').value),
+        booster2: Number(form.querySelector('#insurance').value),
+        booster3: Number(form.querySelector('#boost').value),
+        ko: 0,
+        hasShownBoosterTutorial: true
+    };
+    
+    localStorage.setItem("mjs-drift-boss-game-v1.0.1-dailyreward", JSON.stringify(config));
+    alert('Applied! Reloading...');
+    location.reload();
+});
+
+// Reset Handler
+resetBtn.addEventListener('click', () => {
+    if(confirm('Reset all progress?')) {
+        localStorage.removeItem("mjs-drift-boss-game-v1.0.1-dailyreward");
+        alert('Reset! Reloading...');
+        location.reload();
+    }
+});
+
+menu.appendChild(form);
+document.body.appendChild(menu);
+})();
